@@ -1,0 +1,43 @@
+.env
+__pycache__/
+*.pyc
+.venv/
+venv/
+data/
+.pytest_cache/
+
+# Python
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Environnements et secrets
+.env.*
+!.env.example
+.venv/
+venv/
+
+# IDE et système
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Python
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Environnements et secrets
+.env.*
+!.env.example
+.venv/
+venv/
+
+# IDE et système
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

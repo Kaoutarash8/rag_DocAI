@@ -1,0 +1,27 @@
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+python-multipart==0.0.12
+sqlalchemy==2.0.35
+psycopg2-binary==2.9.10
+alembic==1.13.3
+pydantic==2.9.2
+pydantic-settings==2.5.2
+pymupdf==1.24.11
+pillow==10.4.0
+
+# numpy est imposé par paddlex 3.0.0 (==1.24.4 sous Python < 3.12) :
+# les paquets scientifiques sont donc bornés pour rester compatibles.
+numpy==1.24.4
+protobuf>=4.25,<6
+scipy<1.14
+scikit-learn<1.6
+onnxruntime==1.19.2
+
+paddlepaddle==3.0.0
+paddleocr==3.0.0
+chromadb==0.5.15
+sentence-transformers==3.1.1
+transformers==4.44.2
+huggingface-hub==0.25.2
+openai==1.63.2
+ollama==0.3.3

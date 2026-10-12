@@ -1,0 +1,296 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DocPilot AI — Assistant documentaire</title>
+<style>
+*{box-sizing:border-box}
+:root{--bg:#07152d;--panel:#0b1c35;--panel2:#0d203d;--line:#1a3452;--text:#edf5ff;--muted:#8ea3bf;--cyan:#22d3ee;--green:#23d3a3;--red:#f45d7b;--amber:#f5b74a}
+html,body{margin:0;height:100%;background:#050f20;color:var(--text);font:14px/1.5 Inter,"Segoe UI",Arial,sans-serif}
+button,input{font:inherit;color:inherit}button{cursor:pointer}
+:focus-visible{outline:2px solid var(--cyan);outline-offset:2px}
+.app{display:flex;height:100vh}
+.sidebar{width:208px;flex:none;background:#08172f;border-right:1px solid #17304d;padding:18px 12px;display:flex;flex-direction:column}
+.brand{display:flex;align-items:center;gap:10px;padding:2px 7px 22px;font-size:18px;font-weight:700}
+.brand span{color:#1fd0ed}.logo{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:linear-gradient(135deg,#13b9e6,#4f46e5);box-shadow:0 0 18px #18b9dd44}
+.nav{display:grid;gap:5px}
+.nav button{border:1px solid transparent;background:transparent;color:#8fa5c1;text-align:left;border-radius:8px;padding:10px;display:flex;gap:10px;align-items:center}
+.nav button span{width:18px;text-align:center}
+.nav button:hover,.nav button.active{color:#fff;background:linear-gradient(90deg,#16cde51f,#16cde506);border-color:#22d3ee59}
+.side-bottom{margin-top:auto}
+.workspace{border:1px solid #1c3553;background:#0b1d37;border-radius:9px;padding:12px;margin:8px 0}
+.workspace small{display:block;color:#7088a7;font-size:12px}
+.kv{display:flex;justify-content:space-between;font-size:13px;padding:3px 0;color:#a9bad0}.kv b{color:#fff;font-weight:600}
+.main{flex:1;min-width:0;display:flex;flex-direction:column;background:radial-gradient(circle at 55% 10%,#16436b1e,transparent 35%),#08162c}
+.topbar{height:58px;flex:none;border-bottom:1px solid #17304d;display:flex;align-items:center;gap:12px;padding:0 18px}
+.topbar h1{font-size:15px;font-weight:600;margin:0}
+.pill{margin-left:auto;border:1px solid #213c5c;background:#0c203a;padding:6px 12px;border-radius:8px;font-size:12px;color:#a8b8cc;display:flex;align-items:center;gap:8px}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--muted)}.dot.ok{background:var(--green);box-shadow:0 0 8px var(--green)}.dot.bad{background:var(--red)}
+.content{flex:1;min-height:0;padding:14px;display:grid;grid-template-columns:minmax(0,1fr) 380px;gap:14px}
+.doc-col{min-width:0;overflow:auto;display:flex;flex-direction:column;gap:12px;padding-right:2px}
+.card{border:1px solid var(--line);background:var(--panel);border-radius:9px}
+.card-head{display:flex;align-items:center;gap:10px;padding:11px 14px;border-bottom:1px solid var(--line);font-size:14px}
+.card-head small{color:#7188a4;font-size:12px}.card-head .grow{margin-left:auto}
+.drop{display:flex;align-items:center;gap:14px;padding:16px 18px;border:1.5px dashed #24506e;border-radius:9px;background:#0a1a32;cursor:pointer;transition:border-color .15s,background .15s}
+.drop:hover,.drop.over{border-color:var(--cyan);background:#0e2a45}
+.drop input{position:absolute;opacity:0;width:1px;height:1px}
+.drop:focus-within{outline:2px solid var(--cyan);outline-offset:2px}
+.drop .ico{width:40px;height:40px;border-radius:10px;display:grid;place-items:center;font-size:20px;background:linear-gradient(135deg,#13b9e6,#4f46e5)}
+.drop b{display:block}.drop small{color:var(--muted)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.stat{padding:11px 14px}.stat small{color:#7288a4;font-size:12px}.stat strong{display:block;font-size:22px;font-weight:600;margin-top:2px}
+.stat .g{color:var(--green)}.stat .r{color:var(--red)}.stat .c{color:var(--cyan)}
+.search{border:1px solid #213c5c;background:#0c203a;border-radius:8px;padding:6px 10px;width:200px;outline:0}
+.search:focus{border-color:var(--cyan)}
+.rows{max-height:none}
+.row{display:grid;grid-template-columns:22px 34px minmax(0,1fr) auto auto;gap:12px;align-items:center;padding:10px 14px;border-bottom:1px solid #12294a}
+.row:last-child{border:0}.row:hover{background:#0d2340}
+.row input[type=checkbox]{accent-color:var(--cyan);width:16px;height:16px}
+.fi{width:34px;height:34px;border-radius:8px;background:#102b46;display:grid;place-items:center}
+.nm{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.meta{color:var(--muted);font-size:12px}
+.badge{font-size:12px;padding:2px 10px;border-radius:20px;border:1px solid}
+.b-indexed{color:var(--green);border-color:#23d3a355;background:#23d3a312}.b-pending,.b-processing{color:var(--amber);border-color:#f5b74a55;background:#f5b74a12}.b-failed{color:var(--red);border-color:#f45d7b55;background:#f45d7b12}
+.b-processing::before{content:"";display:inline-block;width:8px;height:8px;margin-right:6px;border:2px solid var(--amber);border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.acts{display:flex;gap:4px}.acts button{width:32px;height:32px;border:1px solid #24405e;border-radius:7px;background:#0b1d36;color:#9fb2ca}
+.acts button:hover{border-color:var(--cyan);color:#fff}.acts .del:hover{border-color:var(--red);color:var(--red)}
+.err{grid-column:3/-1;color:var(--red);font-size:12px;margin-top:-6px}
+.empty{padding:28px;text-align:center;color:var(--muted)}
+.viewer pre{margin:0;padding:14px;max-height:340px;overflow:auto;white-space:pre-wrap;word-break:break-word;font:13px/1.6 "Cascadia Code",Consolas,monospace;color:#c6d6e8;background:#091a31;border-radius:0 0 9px 9px}
+.x{border:0;background:none;color:var(--muted);font-size:18px}
+.intel{display:flex;flex-direction:column;min-height:0;border:1px solid var(--line);background:var(--panel);border-radius:9px}
+.chat{flex:1;overflow:auto;padding:14px;display:flex;flex-direction:column;gap:12px}
+.scope{font-size:12px;color:var(--muted);padding:8px 14px;border-bottom:1px solid var(--line);display:flex;gap:8px;align-items:center}
+.scope button{border:1px solid #24405e;background:#0b1d36;border-radius:6px;padding:1px 8px;font-size:12px;color:var(--cyan)}
+.q{align-self:flex-end;max-width:90%;border:1px solid #22d3ee70;background:#14324b99;padding:9px 12px;border-radius:10px 10px 2px 10px;box-shadow:0 0 17px #22d3ee12;white-space:pre-wrap}
+.a{display:flex;gap:8px}.bot{width:26px;height:26px;border-radius:8px;background:linear-gradient(135deg,#3c8cf5,#15c8c4);display:grid;place-items:center;flex:none}
+.ans{min-width:0;color:#c3d2e3;background:#0c2039;border:1px solid #1b3552;border-radius:8px;padding:10px 12px;box-shadow:0 0 20px #16cfdd0f}
+.ans .txt{white-space:pre-wrap;margin:4px 0 0}.ans.bad{border-color:#f45d7b66;color:#ffb3c1}
+.srcs{margin-top:10px;border-top:1px solid #1b3552;padding-top:8px}.srcs small{color:#7d93ad;display:block;margin-bottom:5px}
+.cite{display:block;width:100%;text-align:left;color:#40d7ef;border:1px solid #22536d;background:transparent;border-radius:6px;padding:4px 8px;font-size:12px;margin-top:4px}
+.cite:hover{background:#22d3ee14}.cite i{color:var(--muted);font-style:normal;float:right}
+.snip{display:none;font-size:12px;color:#9db1c8;background:#091a31;border-radius:6px;padding:8px;margin-top:3px;white-space:pre-wrap}.snip.open{display:block}
+.msg{margin:10px;border:1px solid #1b3655;background:#091a31;border-radius:8px;padding:7px;display:flex;gap:8px}
+.msg input{flex:1;min-width:0;border:0;outline:0;background:transparent}
+.msg button{border:0;background:linear-gradient(135deg,#11b9cf,#417fe8);color:#fff;border-radius:6px;width:34px;height:34px}.msg button:disabled{opacity:.5;cursor:wait}
+#toast{position:fixed;right:18px;bottom:18px;background:#102b46;border:1px solid #28bfd4;padding:10px 14px;border-radius:8px;display:none;z-index:10;max-width:340px}
+@media(max-width:1000px){body{height:auto}.app,.main{height:auto;min-height:100vh}.content{grid-template-columns:1fr}.intel{height:560px}.doc-col{overflow:visible}}
+@media(max-width:720px){.sidebar{width:64px}.brand div:last-child,.nav button{font-size:0}.nav button span{font-size:16px}.workspace{display:none}.pill{display:none}.stats{grid-template-columns:1fr 1fr}.row{grid-template-columns:22px minmax(0,1fr) auto}.fi{display:none}.acts{grid-column:2/-1}.search{width:120px}}
+@media(max-width:480px){.sidebar{display:none}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div class="app">
+<aside class="sidebar">
+  <div class="brand"><div class="logo">✦</div><div>DocPilot <span>AI</span></div></div>
+  <nav class="nav" aria-label="Navigation">
+    <button class="active" data-go="docs"><span>▱</span> Documents</button>
+    <button data-go="chat"><span>✦</span> Assistant</button>
+    <button data-go="key"><span>⚙</span> Clé d'API</button>
+  </nav>
+  <div class="side-bottom">
+    <div class="workspace">
+      <small>Index de recherche</small>
+      <div class="kv"><span>Indexés</span><b id="sIdx">0</b></div>
+      <div class="kv"><span>En cours</span><b id="sRun">0</b></div>
+      <div class="kv"><span>En échec</span><b id="sFail">0</b></div>
+    </div>
+  </div>
+</aside>
+
+<main class="main">
+  <header class="topbar">
+    <h1>Assistant documentaire</h1>
+    <div class="pill"><span class="dot" id="dot"></span><span id="health">Connexion…</span></div>
+  </header>
+
+  <div class="content">
+    <section class="doc-col" id="docs">
+      <label class="drop" id="drop">
+        <input type="file" id="file" multiple accept=".pdf,.png,.jpg,.jpeg,.webp,.bmp,.tif,.tiff">
+        <div class="ico">⇧</div>
+        <div><b>Déposer des documents ici ou cliquer pour choisir</b>
+        <small>PDF et images (PNG, JPG, WEBP, TIFF) — le texte est extrait puis indexé automatiquement</small></div>
+      </label>
+
+      <div class="stats">
+        <div class="card stat"><small>Documents</small><strong id="tTotal">0</strong></div>
+        <div class="card stat"><small>Indexés</small><strong class="g" id="tIdx">0</strong></div>
+        <div class="card stat"><small>Passages de texte</small><strong class="c" id="tChunks">0</strong></div>
+        <div class="card stat"><small>En échec</small><strong class="r" id="tFail">0</strong></div>
+      </div>
+
+      <div class="card">
+        <div class="card-head"><b>Mes documents</b><small id="count"></small>
+          <input class="search grow" id="filter" type="search" placeholder="Filtrer par nom…" aria-label="Filtrer les documents"></div>
+        <div class="rows" id="rows"></div>
+      </div>
+
+      <div class="card viewer" id="viewer" hidden>
+        <div class="card-head"><b id="vTitle">Texte extrait</b><button class="x grow" id="vClose" aria-label="Fermer">×</button></div>
+        <pre id="vText"></pre>
+      </div>
+    </section>
+
+    <aside class="intel" id="chatPanel">
+      <div class="card-head"><b>Document Intelligence</b></div>
+      <div class="scope"><span id="scope">Recherche dans tous les documents indexés</span><button id="clearSel" hidden>Tout désélectionner</button></div>
+      <div class="chat" id="chat" aria-live="polite">
+        <div class="a"><div class="bot">✦</div><div class="ans"><b>DocPilot Assistant</b>
+          <p class="txt">Posez une question sur vos documents. Cochez des documents pour limiter la recherche. Chaque réponse cite ses sources.</p></div></div>
+      </div>
+      <form class="msg" id="form">
+        <input id="q" placeholder="Posez votre question…" autocomplete="off" maxlength="2000" aria-label="Votre question">
+        <button type="submit" id="send" aria-label="Envoyer">➤</button>
+      </form>
+    </aside>
+  </div>
+</main>
+</div>
+<div id="toast" role="status"></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const LABEL = {pending:'En attente', processing:'Traitement…', indexed:'Indexé', failed:'Échec'};
+let docs = [], selected = new Set(), timer = null, toastT;
+
+function toast(t){const e=$('#toast');e.textContent=t;e.style.display='block';clearTimeout(toastT);toastT=setTimeout(()=>e.style.display='none',3200)}
+const size = b => b > 1048576 ? (b/1048576).toFixed(1)+' Mo' : Math.max(1,Math.round(b/1024))+' Ko';
+const when = d => new Date(d+'Z').toLocaleString('fr-FR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
+const detail = j => !j ? '' : typeof j.detail === 'string' ? j.detail : Array.isArray(j.detail) ? j.detail.map(d=>d.msg).join(', ') : '';
+
+async function api(url, opts = {}) {
+  const h = new Headers(opts.headers || {});
+  const k = localStorage.getItem('apiKey'); if (k) h.set('X-API-Key', k);
+  let r = await fetch(url, {...opts, headers: h});
+  if (r.status === 401) {
+    const e = prompt("Clé d'API requise :");
+    if (e) { localStorage.setItem('apiKey', e); h.set('X-API-Key', e); r = await fetch(url, {...opts, headers: h}); }
+  }
+  return r;
+}
+
+async function loadDocs() {
+  try {
+    const r = await api('/documents?limit=200');
+    if (!r.ok) throw new Error(detail(await r.json().catch(()=>null)) || r.statusText);
+    docs = await r.json();
+  } catch (e) { $('#rows').innerHTML = `<div class="empty">Impossible de charger les documents : ${esc(e.message)}</div>`; return; }
+  const ids = new Set(docs.map(d => d.id)); selected.forEach(i => ids.has(i) || selected.delete(i));
+  render();
+  clearTimeout(timer);
+  if (docs.some(d => d.status === 'pending' || d.status === 'processing')) timer = setTimeout(loadDocs, 2000);
+}
+
+function render() {
+  const f = $('#filter').value.trim().toLowerCase();
+  const list = docs.filter(d => d.filename.toLowerCase().includes(f));
+  const n = s => docs.filter(d => d.status === s).length;
+  const run = n('pending') + n('processing');
+  $('#tTotal').textContent = docs.length; $('#tIdx').textContent = n('indexed'); $('#tFail').textContent = n('failed');
+  $('#tChunks').textContent = docs.reduce((a, d) => a + d.chunk_count, 0);
+  $('#sIdx').textContent = n('indexed'); $('#sRun').textContent = run; $('#sFail').textContent = n('failed');
+  $('#count').textContent = list.length === docs.length ? `${docs.length} au total` : `${list.length} sur ${docs.length}`;
+  $('#rows').innerHTML = list.length ? list.map(d => `
+    <div class="row">
+      <input type="checkbox" data-sel="${d.id}" ${selected.has(d.id)?'checked':''} ${d.status!=='indexed'?'disabled':''} aria-label="Limiter la recherche à ${esc(d.filename)}">
+      <div class="fi">${d.file_type === 'pdf' ? '📄' : '🖼'}</div>
+      <div style="min-width:0"><div class="nm" title="${esc(d.filename)}">${esc(d.filename)}</div>
+        <div class="meta">${size(d.size_bytes)}${d.chunk_count ? ' · '+d.chunk_count+' passages' : ''} · ${when(d.created_at)}</div></div>
+      <span class="badge b-${d.status}">${LABEL[d.status]}</span>
+      <div class="acts">
+        <button data-act="text" data-id="${d.id}" title="Voir le texte extrait" aria-label="Voir le texte extrait" ${d.status!=='indexed'?'disabled':''}>👁</button>
+        <button data-act="redo" data-id="${d.id}" title="Relancer le traitement" aria-label="Relancer le traitement" ${d.status==='processing'?'disabled':''}>↻</button>
+        <button class="del" data-act="del" data-id="${d.id}" title="Supprimer" aria-label="Supprimer" ${d.status==='processing'?'disabled':''}>🗑</button>
+      </div>
+      ${d.error_message ? `<div class="err">${esc(d.error_message)}</div>` : ''}
+    </div>`).join('') : `<div class="empty">${docs.length ? 'Aucun document ne correspond au filtre.' : 'Aucun document pour le moment. Déposez un PDF ou une image pour commencer.'}</div>`;
+  const k = selected.size;
+  $('#scope').textContent = k ? `Recherche limitée à ${k} document${k>1?'s':''}` : 'Recherche dans tous les documents indexés';
+  $('#clearSel').hidden = !k;
+}
+
+$('#rows').addEventListener('click', async e => {
+  const b = e.target.closest('button[data-act]'); if (!b) return;
+  const id = +b.dataset.id, d = docs.find(x => x.id === id);
+  if (b.dataset.act === 'text') {
+    const r = await api(`/documents/${id}/text`);
+    if (!r.ok) return toast('Texte indisponible');
+    $('#vTitle').textContent = 'Texte extrait — ' + d.filename; $('#vText').textContent = await r.text();
+    $('#viewer').hidden = false; $('#viewer').scrollIntoView({behavior:'smooth', block:'nearest'});
+  } else if (b.dataset.act === 'redo') {
+    const r = await api(`/documents/${id}/reprocess`, {method:'POST'});
+    toast(r.ok ? 'Traitement relancé' : detail(await r.json().catch(()=>null)) || 'Échec'); loadDocs();
+  } else if (b.dataset.act === 'del') {
+    if (!confirm(`Supprimer « ${d.filename} » et ses données indexées ?`)) return;
+    const r = await api(`/documents/${id}`, {method:'DELETE'});
+    toast(r.ok ? 'Document supprimé' : detail(await r.json().catch(()=>null)) || 'Échec de la suppression'); loadDocs();
+  }
+});
+$('#rows').addEventListener('change', e => {
+  const c = e.target.dataset.sel; if (!c) return;
+  e.target.checked ? selected.add(+c) : selected.delete(+c); render();
+});
+$('#clearSel').onclick = () => { selected.clear(); render(); };
+$('#filter').addEventListener('input', render);
+$('#vClose').onclick = () => $('#viewer').hidden = true;
+
+async function upload(files) {
+  for (const f of files) {
+    const fd = new FormData(); fd.append('file', f);
+    try {
+      const r = await api('/documents/upload', {method:'POST', body: fd}), j = await r.json().catch(()=>null);
+      toast(r.ok ? (j.duplicate ? `« ${f.name} » existe déjà` : `« ${f.name} » reçu, traitement en cours`) : `${f.name} : ${detail(j) || r.statusText}`);
+    } catch { toast(`${f.name} : serveur injoignable`); }
+  }
+  loadDocs();
+}
+$('#file').onchange = e => { upload([...e.target.files]); e.target.value = ''; };
+const drop = $('#drop');
+['dragenter','dragover'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.add('over'); }));
+['dragleave','drop'].forEach(t => drop.addEventListener(t, e => { e.preventDefault(); drop.classList.remove('over'); }));
+drop.addEventListener('drop', e => upload([...e.dataTransfer.files]));
+
+function add(html){const c=$('#chat');c.insertAdjacentHTML('beforeend',html);c.scrollTop=c.scrollHeight;return c.lastElementChild}
+$('#form').addEventListener('submit', async e => {
+  e.preventDefault();
+  const q = $('#q').value.trim(); if (q.length < 3) return;
+  $('#q').value = ''; $('#send').disabled = true;
+  add(`<div class="q">${esc(q)}</div>`);
+  const w = add(`<div class="a"><div class="bot">✦</div><div class="ans"><b>DocPilot Assistant</b><p class="txt">Recherche dans les documents…</p></div></div>`);
+  const box = w.querySelector('.ans');
+  try {
+    const r = await api('/ask', {method:'POST', headers:{'Content-Type':'application/json'},
+      body: JSON.stringify({question:q, top_k:5, document_ids: selected.size ? [...selected] : null})});
+    const j = await r.json().catch(()=>null);
+    if (!r.ok) { box.classList.add('bad'); box.innerHTML = `<b>Erreur</b><p class="txt">${esc(detail(j) || r.statusText)}</p>`; }
+    else {
+      box.innerHTML = `<b>DocPilot Assistant</b><p class="txt">${esc(j.answer)}</p>` + (j.sources.length ? `<div class="srcs"><small>Sources</small>` +
+        j.sources.map((s,i) => `<button class="cite" data-i="${i}">[${i+1}] ${esc(s.source)}<i>${Math.round(s.score*100)} %</i></button><div class="snip">${esc(s.snippet)}</div>`).join('') + `</div>` : '');
+    }
+  } catch { box.classList.add('bad'); box.innerHTML = `<b>Erreur</b><p class="txt">Serveur injoignable. Vérifiez la connexion puis réessayez.</p>`; }
+  $('#send').disabled = false; $('#chat').scrollTop = $('#chat').scrollHeight; $('#q').focus();
+});
+$('#chat').addEventListener('click', e => { const c = e.target.closest('.cite'); if (c) c.nextElementSibling.classList.toggle('open'); });
+
+document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => {
+  document.querySelectorAll('.nav button').forEach(x => x.classList.toggle('active', x === b));
+  const g = b.dataset.go;
+  if (g === 'docs') $('#docs').scrollIntoView({behavior:'smooth'});
+  if (g === 'chat') { $('#chatPanel').scrollIntoView({behavior:'smooth'}); $('#q').focus(); }
+  if (g === 'key') { const k = prompt("Clé d'API (laisser vide pour l'effacer) :", localStorage.getItem('apiKey') || ''); if (k !== null) { k ? localStorage.setItem('apiKey', k) : localStorage.removeItem('apiKey'); loadDocs(); } }
+});
+
+async function health() {
+  try { const r = await fetch('/ready'), j = await r.json();
+    $('#dot').className = 'dot ' + (r.ok ? 'ok' : 'bad');
+    $('#health').textContent = r.ok ? `Opérationnel · ${j.vectorstore_chunks} passages indexés` : 'Service dégradé';
+  } catch { $('#dot').className = 'dot bad'; $('#health').textContent = 'Hors ligne'; }
+}
+loadDocs(); health(); setInterval(health, 30000);
+</script>
+</body>
+</html>
