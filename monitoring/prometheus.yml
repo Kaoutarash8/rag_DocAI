@@ -1,0 +1,18 @@
+global:
+  scrape_interval: 15s
+
+scrape_configs:
+  # dns_sd : une cible par conteneur, y compris après `docker compose up --scale api=2 worker=3`
+  - job_name: api
+    metrics_path: /metrics
+    dns_sd_configs:
+      - names: [api]
+        type: A
+        port: 8000
+    # Si METRICS_TOKEN est défini côté API, ajoutez :
+    # authorization: { credentials: "<le même jeton>" }
+  - job_name: worker
+    dns_sd_configs:
+      - names: [worker]
+        type: A
+        port: 9101

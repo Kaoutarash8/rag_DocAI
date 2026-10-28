@@ -51,12 +51,11 @@ def test_path_traversal_filename_is_sanitized(client):
     assert r.json()["filename"] == "passwd.pdf"
 
 
-def test_api_key_required_when_configured(client, monkeypatch):
-    monkeypatch.setattr(get_settings(), "api_key", "secret")
-    assert client.get("/documents").status_code == 401
-    assert client.get("/documents", headers={"X-API-Key": "bad"}).status_code == 401
-    assert client.get("/documents", headers={"X-API-Key": "secret"}).status_code == 200
-    assert client.get("/health").status_code == 200  # reste public
+def test_authentication_required(anon):
+    assert anon.get("/documents").status_code == 401
+    assert anon.post("/ask", json={"question": "une question"}).status_code == 401
+    assert anon.get("/documents", headers={"Authorization": "Bearer nimporte.quoi"}).status_code == 401
+    assert anon.get("/health").status_code == 200  # reste public
 
 
 def test_ask_validation(client):
@@ -67,13 +66,18 @@ def test_ask_validation(client):
 def test_ask_no_hits_and_with_hits(client, monkeypatch):
     from app.services import embeddings, llm, vectorstore
     from app.services.vectorstore import Hit
-    monkeypatch.setattr(embeddings, "embed", lambda t: [[0.1, 0.2]])
+    monkeypatch.setattr(embeddings, "embed_query", lambda m, t: [0.1, 0.2])
+    monkeypatch.setattr(vectorstore, "count", lambda c: 0)
+    monkeypatch.setattr(vectorstore, "_existing_names", lambda: set())
     monkeypatch.setattr(vectorstore, "search", lambda *a, **k: [])
     r = client.post("/ask", json={"question": "Quel est le prix ?"})
     assert r.status_code == 200 and r.json()["sources"] == []
 
-    hit = Hit("Le prix est de 100 euros.", "contrat.pdf", 1, 0, 0.8)
-    low = Hit("hors sujet", "autre.pdf", 2, 0, 0.01)
+    # les passages ne sont renvoyés que pour des documents appartenant à l'utilisateur
+    d1 = upload(client, "contrat.pdf", PDF + b"ask-doc-1").json()["id"]
+    d2 = upload(client, "autre.pdf", PDF + b"ask-doc-2").json()["id"]
+    hit = Hit("Le prix est de 100 euros.", "contrat.pdf", d1, 0, 0.8)
+    low = Hit("hors sujet", "autre.pdf", d2, 0, 0.01)
     monkeypatch.setattr(vectorstore, "search", lambda *a, **k: [hit, low])
     monkeypatch.setattr(llm, "generate_answer", lambda q, c: f"ok {len(c)}")
     body = client.post("/ask", json={"question": "Quel est le prix ?"}).json()
@@ -81,14 +85,32 @@ def test_ask_no_hits_and_with_hits(client, monkeypatch):
     assert body["sources"][0]["source"] == "contrat.pdf"
 
 
+def test_ask_unknown_profile_returns_400(client):
+    r = client.post("/ask", json={"question": "une question", "profile": "nexiste-pas"})
+    assert r.status_code == 400 and "Profil inconnu" in r.json()["detail"]
+
+
 def test_llm_failure_returns_502(client, monkeypatch):
     from app.core.errors import LLMError
     from app.services import embeddings, llm, vectorstore
     from app.services.vectorstore import Hit
-    monkeypatch.setattr(embeddings, "embed", lambda t: [[0.1]])
-    monkeypatch.setattr(vectorstore, "search", lambda *a, **k: [Hit("t", "s", 1, 0, 0.9)])
+    d = upload(client, "llm.pdf", PDF + b"llm-doc").json()["id"]
+    monkeypatch.setattr(embeddings, "embed_query", lambda m, t: [0.1])
+    monkeypatch.setattr(vectorstore, "search", lambda *a, **k: [Hit("t", "s", d, 0, 0.9)])
 
     def boom(q, c):
         raise LLMError("down")
     monkeypatch.setattr(llm, "generate_answer", boom)
     assert client.post("/ask", json={"question": "une question"}).status_code == 502
+
+
+def test_accepts_office_and_text_formats(client, tmp_path):
+    from docx import Document
+    p = tmp_path / "x.docx"
+    Document().save(p)
+    r = client.post("/documents/upload", files={"file": ("x.docx", p.read_bytes(), "application/octet-stream")})
+    assert r.status_code == 202 and r.json()["file_type"] == "docx"
+    r = client.post("/documents/upload", files={"file": ("n.md", b"# Titre\ntexte", "text/markdown")})
+    assert r.status_code == 202 and r.json()["file_type"] == "md"
+    r = client.post("/documents/upload", files={"file": ("old.doc", b"\xd0\xcf\x11\xe0", "application/msword")})
+    assert r.status_code == 415

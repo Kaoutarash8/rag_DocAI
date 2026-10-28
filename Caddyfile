@@ -1,0 +1,27 @@
+{$DOMAIN:localhost} {
+	encode zstd gzip
+
+	@internal path /metrics /metrics/*
+	respond @internal 404
+
+	request_body {
+		max_size 210MB
+	}
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "no-referrer"
+		-Server
+	}
+
+	reverse_proxy api:8000 {
+		transport http {
+			response_header_timeout 10m
+			read_timeout 10m
+		}
+		health_uri /health
+		health_interval 15s
+	}
+}

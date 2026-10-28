@@ -9,6 +9,11 @@ pydantic-settings==2.5.2
 pymupdf==1.24.11
 pillow==10.4.0
 
+# Formats Office / texte : aucune dépendance à numpy (donc pas de conflit avec paddlex)
+python-docx==1.2.0
+python-pptx==1.0.2
+openpyxl==3.1.5
+
 # numpy est imposé par paddlex 3.0.0 (==1.24.4 sous Python < 3.12) :
 # les paquets scientifiques sont donc bornés pour rester compatibles.
 numpy==1.24.4
@@ -25,3 +30,9 @@ transformers==4.44.2
 huggingface-hub==0.25.2
 openai==1.63.2
 ollama==0.3.3
+
+# Sécurité, exploitation
+pyjwt==2.9.0
+redis==5.0.8
+celery==5.4.0
+prometheus-client==0.20.0

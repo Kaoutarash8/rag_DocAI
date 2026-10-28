@@ -43,5 +43,5 @@ def session_scope():
 
 
 def init_db() -> None:
-    from app.models.document import Document  # noqa: F401
+    from app.models import document, index_collection, user  # noqa: F401
     Base.metadata.create_all(bind=engine)

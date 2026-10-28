@@ -74,23 +74,54 @@ button,input{font:inherit;color:inherit}button{cursor:pointer}
 .msg{margin:10px;border:1px solid #1b3655;background:#091a31;border-radius:8px;padding:7px;display:flex;gap:8px}
 .msg input{flex:1;min-width:0;border:0;outline:0;background:transparent}
 .msg button{border:0;background:linear-gradient(135deg,#11b9cf,#417fe8);color:#fff;border-radius:6px;width:34px;height:34px}.msg button:disabled{opacity:.5;cursor:wait}
+.msg #sum{width:auto;padding:0 10px;font-size:12px;background:transparent;border:1px solid #22536d;color:#40d7ef}
 #toast{position:fixed;right:18px;bottom:18px;background:#102b46;border:1px solid #28bfd4;padding:10px 14px;border-radius:8px;display:none;z-index:10;max-width:340px}
 @media(max-width:1000px){body{height:auto}.app,.main{height:auto;min-height:100vh}.content{grid-template-columns:1fr}.intel{height:560px}.doc-col{overflow:visible}}
 @media(max-width:720px){.sidebar{width:64px}.brand div:last-child,.nav button{font-size:0}.nav button span{font-size:16px}.workspace{display:none}.pill{display:none}.stats{grid-template-columns:1fr 1fr}.row{grid-template-columns:22px minmax(0,1fr) auto}.fi{display:none}.acts{grid-column:2/-1}.search{width:120px}}
 @media(max-width:480px){.sidebar{display:none}}
 @media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+#auth{position:fixed;inset:0;background:#050f21f2;display:none;place-items:center;z-index:20}
+#auth.show{display:grid}
+#auth form{width:min(380px,92vw);background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:22px;display:flex;flex-direction:column;gap:10px;box-shadow:0 0 40px #22d3ee14}
+#auth h2{margin:0 0 4px;font-size:18px}#auth p{margin:0 0 6px;color:var(--muted);font-size:13px}
+#auth input{border:1px solid #1b3655;background:#091a31;border-radius:8px;padding:10px 12px;color:var(--text);outline:0}
+#auth input:focus{border-color:#22d3ee90}
+#auth .btns{display:flex;gap:8px;margin-top:4px}
+#auth button{flex:1;border-radius:8px;padding:10px;border:1px solid #22536d;background:transparent;color:#40d7ef}
+#auth button.primary{border:0;background:linear-gradient(135deg,#11b9cf,#417fe8);color:#fff}
+#auth .err{color:#ffb3c1;font-size:12px;min-height:16px}
+.who{font-size:12px;color:var(--muted);padding:0 4px 10px;word-break:break-all}
+.tag{font-size:11px;border:1px solid #28bfd455;color:#40d7ef;border-radius:5px;padding:0 6px;margin-left:6px}
+.cite.off{opacity:.6}.cite b{color:#9be7f5;font-weight:600}
+.pg{color:#cfe3f5}.rel{color:var(--muted);font-style:normal;float:right;font-size:11px}
+.legend{font-size:11px;color:#7d93ad;line-height:1.5;margin:0 0 6px}
+.rq{font-size:12px;color:#7d93ad;margin-top:8px}
 </style>
 </head>
 <body>
+<div id="auth" role="dialog" aria-modal="true" aria-labelledby="authTitle">
+  <form id="authForm" autocomplete="on">
+    <h2 id="authTitle">Connexion</h2>
+    <p>Vos documents sont privés : vous seul (et les personnes avec qui vous les partagez) y avez accès.</p>
+    <input id="aEmail" type="email" name="email" placeholder="Adresse e-mail" autocomplete="username" required>
+    <input id="aPass" type="password" name="password" placeholder="Mot de passe" autocomplete="current-password" required>
+    <div class="err" id="aErr" role="alert"></div>
+    <div class="btns">
+      <button type="button" id="aRegister">Créer un compte</button>
+      <button type="submit" class="primary">Se connecter</button>
+    </div>
+  </form>
+</div>
 <div class="app">
 <aside class="sidebar">
   <div class="brand"><div class="logo">✦</div><div>DocPilot <span>AI</span></div></div>
   <nav class="nav" aria-label="Navigation">
     <button class="active" data-go="docs"><span>▱</span> Documents</button>
     <button data-go="chat"><span>✦</span> Assistant</button>
-    <button data-go="key"><span>⚙</span> Clé d'API</button>
+    <button data-go="logout"><span>⎋</span> Déconnexion</button>
   </nav>
   <div class="side-bottom">
+    <div class="who" id="who"></div>
     <div class="workspace">
       <small>Index de recherche</small>
       <div class="kv"><span>Indexés</span><b id="sIdx">0</b></div>
@@ -109,7 +140,7 @@ button,input{font:inherit;color:inherit}button{cursor:pointer}
   <div class="content">
     <section class="doc-col" id="docs">
       <label class="drop" id="drop">
-        <input type="file" id="file" multiple accept=".pdf,.png,.jpg,.jpeg,.webp,.bmp,.tif,.tiff">
+        <input type="file" id="file" multiple accept=".pdf,.png,.jpg,.jpeg,.webp,.bmp,.tif,.tiff,.docx,.pptx,.xlsx,.txt,.md">
         <div class="ico">⇧</div>
         <div><b>Déposer des documents ici ou cliquer pour choisir</b>
         <small>PDF et images (PNG, JPG, WEBP, TIFF) — le texte est extrait puis indexé automatiquement</small></div>
@@ -136,7 +167,7 @@ button,input{font:inherit;color:inherit}button{cursor:pointer}
 
     <aside class="intel" id="chatPanel">
       <div class="card-head"><b>Document Intelligence</b></div>
-      <div class="scope"><span id="scope">Recherche dans tous les documents indexés</span><button id="clearSel" hidden>Tout désélectionner</button></div>
+      <div class="scope"><span id="scope">Recherche dans tous les documents indexés</span><button id="clearSel" hidden>Tout désélectionner</button><button id="newChat" title="Oublier le contexte de la conversation">Nouvelle conversation</button></div>
       <div class="chat" id="chat" aria-live="polite">
         <div class="a"><div class="bot">✦</div><div class="ans"><b>DocPilot Assistant</b>
           <p class="txt">Posez une question sur vos documents. Cochez des documents pour limiter la recherche. Chaque réponse cite ses sources.</p></div></div>
@@ -144,6 +175,7 @@ button,input{font:inherit;color:inherit}button{cursor:pointer}
       <form class="msg" id="form">
         <input id="q" placeholder="Posez votre question…" autocomplete="off" maxlength="2000" aria-label="Votre question">
         <button type="submit" id="send" aria-label="Envoyer">➤</button>
+        <button type="button" id="sum" title="Résumer le document sélectionné (par sections)">Résumer</button>
       </form>
     </aside>
   </div>
@@ -156,21 +188,67 @@ const $ = s => document.querySelector(s);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const LABEL = {pending:'En attente', processing:'Traitement…', indexed:'Indexé', failed:'Échec'};
 let docs = [], selected = new Set(), timer = null, toastT;
+let chatHistory = [];   // derniers messages {role, content} envoyés à /ask pour garder le contexte de la conversation
 
 function toast(t){const e=$('#toast');e.textContent=t;e.style.display='block';clearTimeout(toastT);toastT=setTimeout(()=>e.style.display='none',3200)}
 const size = b => b > 1048576 ? (b/1048576).toFixed(1)+' Mo' : Math.max(1,Math.round(b/1024))+' Ko';
 const when = d => new Date(d+'Z').toLocaleString('fr-FR',{day:'2-digit',month:'short',hour:'2-digit',minute:'2-digit'});
 const detail = j => !j ? '' : typeof j.detail === 'string' ? j.detail : Array.isArray(j.detail) ? j.detail.map(d=>d.msg).join(', ') : '';
 
+// Jeton JWT en sessionStorage : il disparaît à la fermeture de l'onglet (durée de vie courte côté serveur).
+const token = () => sessionStorage.getItem('token');
+function showAuth(msg) { $('#auth').classList.add('show'); $('#aErr').textContent = msg || ''; $('#aEmail').focus(); }
+function logout(msg) { sessionStorage.removeItem('token'); chatHistory = []; docs = []; selected.clear(); render(); $('#who').textContent = ''; showAuth(msg); }
+
 async function api(url, opts = {}) {
   const h = new Headers(opts.headers || {});
-  const k = localStorage.getItem('apiKey'); if (k) h.set('X-API-Key', k);
-  let r = await fetch(url, {...opts, headers: h});
-  if (r.status === 401) {
-    const e = prompt("Clé d'API requise :");
-    if (e) { localStorage.setItem('apiKey', e); h.set('X-API-Key', e); r = await fetch(url, {...opts, headers: h}); }
-  }
+  if (token()) h.set('Authorization', 'Bearer ' + token());
+  const r = await fetch(url, {...opts, headers: h});
+  if (r.status === 401) logout('Session expirée ou connexion requise.');
   return r;
+}
+
+async function authenticate(register) {
+  const email = $('#aEmail').value.trim(), password = $('#aPass').value;
+  $('#aErr').textContent = '';
+  try {
+    if (register) {
+      const r = await fetch('/auth/register', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email, password})});
+      if (!r.ok) return $('#aErr').textContent = detail(await r.json().catch(()=>null)) || 'Inscription impossible';
+    }
+    const r = await fetch('/auth/login', {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email, password})});
+    const j = await r.json().catch(()=>null);
+    if (!r.ok) return $('#aErr').textContent = detail(j) || 'Connexion impossible';
+    sessionStorage.setItem('token', j.access_token);
+    $('#aPass').value = ''; $('#auth').classList.remove('show');
+    await loadMe(); loadDocs();
+  } catch { $('#aErr').textContent = 'Serveur injoignable'; }
+}
+$('#authForm').addEventListener('submit', e => { e.preventDefault(); authenticate(false); });
+$('#aRegister').onclick = () => $('#authForm').reportValidity() && authenticate(true);
+
+async function loadMe() {
+  if (!token()) return;
+  const r = await api('/auth/me');
+  if (r.ok) { const u = await r.json(); $('#who').textContent = u.email + (u.role === 'admin' ? ' · admin' : ''); }
+}
+
+async function shareDialog(d) {
+  const r = await api(`/documents/${d.id}/shares`);
+  if (!r.ok) return toast(detail(await r.json().catch(()=>null)) || 'Partage indisponible');
+  const list = await r.json();
+  const input = prompt(`« ${d.filename} »\nPartagé en lecture avec : ${list.map(s => s.email).join(', ') || 'personne'}\n\n` +
+    `Saisissez un e-mail pour partager, ou « -e-mail » pour retirer l'accès :`, '');
+  if (!input || !input.trim()) return;
+  const revoke = input.trim().startsWith('-'), email = input.trim().replace(/^-/, '').trim().toLowerCase();
+  if (revoke) {
+    const s = list.find(x => x.email === email); if (!s) return toast('Cet utilisateur n\'a pas accès');
+    const rr = await api(`/documents/${d.id}/shares/${s.user_id}`, {method:'DELETE'});
+    toast(rr.ok ? 'Accès retiré' : detail(await rr.json().catch(()=>null)) || 'Échec');
+  } else {
+    const rr = await api(`/documents/${d.id}/shares`, {method:'POST', headers:{'Content-Type':'application/json'}, body: JSON.stringify({email})});
+    toast(rr.ok ? `Partagé avec ${email}` : detail(await rr.json().catch(()=>null)) || 'Échec du partage');
+  }
 }
 
 async function loadDocs() {
@@ -198,13 +276,14 @@ function render() {
     <div class="row">
       <input type="checkbox" data-sel="${d.id}" ${selected.has(d.id)?'checked':''} ${d.status!=='indexed'?'disabled':''} aria-label="Limiter la recherche à ${esc(d.filename)}">
       <div class="fi">${d.file_type === 'pdf' ? '📄' : '🖼'}</div>
-      <div style="min-width:0"><div class="nm" title="${esc(d.filename)}">${esc(d.filename)}</div>
-        <div class="meta">${size(d.size_bytes)}${d.chunk_count ? ' · '+d.chunk_count+' passages' : ''} · ${when(d.created_at)}</div></div>
+      <div style="min-width:0"><div class="nm" title="${esc(d.filename)}">${esc(d.filename)}${d.access==='shared'?'<span class="tag">partagé</span>':d.access==='admin'?'<span class="tag">admin</span>':''}</div>
+        <div class="meta">${size(d.size_bytes)}${d.chunk_count ? ' · '+d.chunk_count+' passages' : ''}${d.status==='processing' && d.pages_total ? ' · '+d.pages_done+'/'+d.pages_total+' pages' : ''} · ${when(d.created_at)}</div></div>
       <span class="badge b-${d.status}">${LABEL[d.status]}</span>
       <div class="acts">
         <button data-act="text" data-id="${d.id}" title="Voir le texte extrait" aria-label="Voir le texte extrait" ${d.status!=='indexed'?'disabled':''}>👁</button>
+        ${d.access==='shared' ? '' : `<button data-act="share" data-id="${d.id}" title="Partager en lecture" aria-label="Partager en lecture">👥</button>
         <button data-act="redo" data-id="${d.id}" title="Relancer le traitement" aria-label="Relancer le traitement" ${d.status==='processing'?'disabled':''}>↻</button>
-        <button class="del" data-act="del" data-id="${d.id}" title="Supprimer" aria-label="Supprimer" ${d.status==='processing'?'disabled':''}>🗑</button>
+        <button class="del" data-act="del" data-id="${d.id}" title="Supprimer" aria-label="Supprimer" ${d.status==='processing'?'disabled':''}>🗑</button>`}
       </div>
       ${d.error_message ? `<div class="err">${esc(d.error_message)}</div>` : ''}
     </div>`).join('') : `<div class="empty">${docs.length ? 'Aucun document ne correspond au filtre.' : 'Aucun document pour le moment. Déposez un PDF ou une image pour commencer.'}</div>`;
@@ -221,6 +300,8 @@ $('#rows').addEventListener('click', async e => {
     if (!r.ok) return toast('Texte indisponible');
     $('#vTitle').textContent = 'Texte extrait — ' + d.filename; $('#vText').textContent = await r.text();
     $('#viewer').hidden = false; $('#viewer').scrollIntoView({behavior:'smooth', block:'nearest'});
+  } else if (b.dataset.act === 'share') {
+    await shareDialog(d);
   } else if (b.dataset.act === 'redo') {
     const r = await api(`/documents/${id}/reprocess`, {method:'POST'});
     toast(r.ok ? 'Traitement relancé' : detail(await r.json().catch(()=>null)) || 'Échec'); loadDocs();
@@ -235,6 +316,7 @@ $('#rows').addEventListener('change', e => {
   e.target.checked ? selected.add(+c) : selected.delete(+c); render();
 });
 $('#clearSel').onclick = () => { selected.clear(); render(); };
+$('#newChat').onclick = () => { chatHistory = []; toast('Nouvelle conversation : le contexte précédent est oublié'); };
 $('#filter').addEventListener('input', render);
 $('#vClose').onclick = () => $('#viewer').hidden = true;
 
@@ -264,16 +346,37 @@ $('#form').addEventListener('submit', async e => {
   const box = w.querySelector('.ans');
   try {
     const r = await api('/ask', {method:'POST', headers:{'Content-Type':'application/json'},
-      body: JSON.stringify({question:q, top_k:5, document_ids: selected.size ? [...selected] : null})});
+      body: JSON.stringify({question:q, document_ids: selected.size ? [...selected] : null, history: chatHistory.slice(-6)})});
     const j = await r.json().catch(()=>null);
     if (!r.ok) { box.classList.add('bad'); box.innerHTML = `<b>Erreur</b><p class="txt">${esc(detail(j) || r.statusText)}</p>`; }
     else {
-      box.innerHTML = `<b>DocPilot Assistant</b><p class="txt">${esc(j.answer)}</p>` + (j.sources.length ? `<div class="srcs"><small>Sources</small>` +
-        j.sources.map((s,i) => `<button class="cite" data-i="${i}">[${i+1}] ${esc(s.source)}<i>${Math.round(s.score*100)} %</i></button><div class="snip">${esc(s.snippet)}</div>`).join('') + `</div>` : '');
+      chatHistory.push({role:'user', content:q}, {role:'assistant', content:j.answer}); chatHistory = chatHistory.slice(-12);
+      const rel = s => s.score == null ? '' : s.score_kind === 'rerank' ? `pertinence ${Math.round(s.score*100)} %`
+        : s.score_kind === 'cosine' ? `similarité ${Math.round(s.score*100)} %` : `rang ${s.score.toFixed(3)}`;
+      const page = s => s.page ? ' · <span class="pg">page ' + s.page + (s.page_end ? '–' + s.page_end : '') + '</span>' : '';
+      box.innerHTML = `<b>DocPilot Assistant</b><p class="txt">${esc(j.answer)}</p>` + (j.sources.length ? `<div class="srcs">
+        <p class="legend"><b>[n]</b> = numéro de l'extrait cité dans la réponse · <b>page</b> = page du document · <b>%</b> = proximité avec la question (ne garantit pas que l'extrait justifie la réponse)</p>` +
+        j.sources.map((s,i) => `<button class="cite${s.cited ? '' : ' off'}" data-i="${i}" title="${s.cited ? 'Extrait cité dans la réponse' : 'Extrait consulté, non cité dans la réponse'}"><b>[${s.ref || i+1}]</b> ${esc(s.source)}${page(s)}${s.section ? ' · ' + esc(s.section) : ''}${s.kind && s.kind !== 'text' ? ' · ' + (s.kind === 'table' ? 'tableau' : 'figure') : ''}<i class="rel">${s.cited ? '✓ cité · ' : ''}${rel(s)}</i></button><div class="snip">${esc(s.snippet)}</div>`).join('') + `</div>` : '') +
+        (j.search_query && j.search_query.trim().toLowerCase() !== q.toLowerCase() ? `<div class="rq">Requête de recherche utilisée : « ${esc(j.search_query)} »</div>` : '');
     }
   } catch { box.classList.add('bad'); box.innerHTML = `<b>Erreur</b><p class="txt">Serveur injoignable. Vérifiez la connexion puis réessayez.</p>`; }
   $('#send').disabled = false; $('#chat').scrollTop = $('#chat').scrollHeight; $('#q').focus();
 });
+$('#sum').onclick = async () => {
+  if (selected.size !== 1) { toast('Cochez un seul document à résumer'); return; }
+  const id = [...selected][0], name = (docs.find(d => d.id === id) || {}).filename || 'document';
+  $('#sum').disabled = true;
+  add(`<div class="q">Résumé de ${esc(name)}</div>`);
+  const w = add(`<div class="a"><div class="bot">✦</div><div class="ans"><b>DocPilot Assistant</b><p class="txt">Résumé par sections en cours (peut prendre un moment)…</p></div></div>`);
+  const box = w.querySelector('.ans');
+  try {
+    const r = await api(`/documents/${id}/summary`, {method:'POST'}), j = await r.json().catch(()=>null);
+    if (!r.ok) { box.classList.add('bad'); box.innerHTML = `<b>Erreur</b><p class="txt">${esc(detail(j) || r.statusText)}</p>`; }
+    else box.innerHTML = `<b>DocPilot Assistant</b><p class="txt">${esc(j.summary)}</p>` + (j.truncated ? '<p class="txt"><i>Document très long : seul le début a été résumé.</i></p>' : '') +
+      (j.parts.length > 1 ? `<div class="srcs"><small>Par section</small>` + j.parts.map(p => `<button class="cite">${esc(p.title || 'pages ' + p.pages)}<i>${p.pages ? 'p. ' + p.pages : ''}</i></button><div class="snip">${esc(p.summary)}</div>`).join('') + `</div>` : '');
+  } catch { box.classList.add('bad'); box.innerHTML = `<b>Erreur</b><p class="txt">Serveur injoignable.</p>`; }
+  $('#sum').disabled = false; $('#chat').scrollTop = $('#chat').scrollHeight;
+};
 $('#chat').addEventListener('click', e => { const c = e.target.closest('.cite'); if (c) c.nextElementSibling.classList.toggle('open'); });
 
 document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => {
@@ -281,7 +384,7 @@ document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => {
   const g = b.dataset.go;
   if (g === 'docs') $('#docs').scrollIntoView({behavior:'smooth'});
   if (g === 'chat') { $('#chatPanel').scrollIntoView({behavior:'smooth'}); $('#q').focus(); }
-  if (g === 'key') { const k = prompt("Clé d'API (laisser vide pour l'effacer) :", localStorage.getItem('apiKey') || ''); if (k !== null) { k ? localStorage.setItem('apiKey', k) : localStorage.removeItem('apiKey'); loadDocs(); } }
+  if (g === 'logout') logout();
 });
 
 async function health() {
@@ -290,7 +393,8 @@ async function health() {
     $('#health').textContent = r.ok ? `Opérationnel · ${j.vectorstore_chunks} passages indexés` : 'Service dégradé';
   } catch { $('#dot').className = 'dot bad'; $('#health').textContent = 'Hors ligne'; }
 }
-loadDocs(); health(); setInterval(health, 30000);
+token() ? (loadMe(), loadDocs()) : showAuth();
+health(); setInterval(health, 30000);
 </script>
 </body>
 </html>
